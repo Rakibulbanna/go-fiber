@@ -8,7 +8,7 @@ services:
     environment:
       POSTGRES_USER: ${DB_USER:-postgres}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
-      POSTGRES_DB: ${DB_NAME:-go_fiber_db}
+      POSTGRES_DB: ${DB_NAME:-fiber_demo}
     ports:
       - "${DB_PORT:-5432}:5432"
     volumes:
@@ -33,7 +33,7 @@ services:
       DB_PORT: 5432
       DB_USER: ${DB_USER:-postgres}
       DB_PASSWORD: ${DB_PASSWORD:-postgres}
-      DB_NAME: ${DB_NAME:-go_fiber_db}
+      DB_NAME: ${DB_NAME:-fiber_demo}
       DB_SSLMODE: disable
       JWT_SECRET: ${JWT_SECRET:-your-secret-key-change-in-production}
       PORT: ${PORT:-8080}

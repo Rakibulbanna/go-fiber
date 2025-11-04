@@ -19,17 +19,21 @@ func (r *BookRepository) Create(book *models.Book) error {
 
 func (r *BookRepository) FindAll() ([]models.Book, error) {
 	var books []models.Book
-	err := r.db.Find(&books).Error
+	err := r.db.Preload("User").Find(&books).Error
+	return books, err
+}
+
+// FindAllWithUsers performs a JOIN query to fetch books with user data in a single query
+func (r *BookRepository) FindAllWithUsers() ([]models.Book, error) {
+	var books []models.Book
+	err := r.db.Joins("User").Find(&books).Error
 	return books, err
 }
 
 func (r *BookRepository) FindByID(id uint) (*models.Book, error) {
 	var book models.Book
-	err := r.db.First(&book, id).Error
-	if err != nil {
-		return nil, err
-	}
-	return &book, nil
+	err := r.db.Joins("User").First(&book, id).Error
+	return &book, err
 }
 
 func (r *BookRepository) Update(book *models.Book) error {

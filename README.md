@@ -45,18 +45,22 @@ A production-ready REST API built with Go Fiber, GORM, and PostgreSQL, featuring
 ### Using Makefile (Recommended)
 
 1. **Initial Setup**
+
    ```bash
    make setup
    ```
+
    This will install tools, download dependencies, and check your environment file.
 
 2. **Configure environment variables**
+
    - Copy `.env.dev.example` to `.env.dev`
    - Update the database credentials and JWT secret
 
 3. **Create the database**
+
    ```sql
-   CREATE DATABASE go_fiber_db;
+   CREATE DATABASE fiber_demo;
    ```
 
 4. **Run in development mode (with hot reload)**
@@ -69,17 +73,20 @@ A production-ready REST API built with Go Fiber, GORM, and PostgreSQL, featuring
 ### Manual Setup
 
 1. **Clone the repository**
+
    ```bash
    git clone <repository-url>
    cd go-api-with-fiber-gorm
    ```
 
 2. **Install dependencies**
+
    ```bash
    go mod download
    ```
 
 3. **Configure environment variables**
+
    - Copy `.env.dev.example` to `.env.dev`
    - Update the database credentials and JWT secret:
      ```env
@@ -87,15 +94,16 @@ A production-ready REST API built with Go Fiber, GORM, and PostgreSQL, featuring
      DB_PORT=5432
      DB_USER=postgres
      DB_PASSWORD=your_password
-     DB_NAME=go_fiber_db
+     DB_NAME=fiber_demo
      DB_SSLMODE=disable
      JWT_SECRET=your-strong-secret-key
      PORT=8080
      ```
 
 4. **Create the database**
+
    ```sql
-   CREATE DATABASE go_fiber_db;
+   CREATE DATABASE fiber_demo;
    ```
 
 5. **Run migrations**
@@ -124,11 +132,13 @@ make build
 ### Manual Commands
 
 #### Development Mode (with Air hot reload)
+
 ```bash
 air
 ```
 
 #### Production Mode
+
 ```bash
 go run main.go
 ```
@@ -138,6 +148,7 @@ The server will start on `http://localhost:8080` (or the port specified in your 
 ### Using Docker Compose
 
 #### Production Mode
+
 ```bash
 # Start all services (API + PostgreSQL)
 make docker-up
@@ -150,6 +161,7 @@ make docker-down
 ```
 
 #### Development Mode (with hot reload)
+
 ```bash
 # Start development environment
 make docker-dev
@@ -162,6 +174,7 @@ make docker-down-dev
 ```
 
 #### Manual Docker Compose Commands
+
 ```bash
 # Production
 docker-compose up -d
@@ -179,15 +192,18 @@ docker-compose -f docker-compose.dev.yml down
 The project includes a comprehensive Makefile with the following commands:
 
 ### Setup & Dependencies
+
 - `make setup` - Complete initial setup (install tools, deps, check env)
 - `make deps` - Download and install dependencies
 - `make tidy` - Clean up dependencies
 - `make install-tools` - Install required tools (air, etc.)
 
 ### Database
+
 - `make migrate` - Run database migrations
 
 ### Build & Run
+
 - `make build` - Build the application
 - `make run` - Run with `go run`
 - `make air` - Run with air (hot reload)
@@ -196,26 +212,31 @@ The project includes a comprehensive Makefile with the following commands:
 - `make run-prod` - Run the built binary
 
 ### Cross-platform Builds
+
 - `make build-linux` - Build for Linux
 - `make build-windows` - Build for Windows
 - `make build-mac` - Build for macOS
 
 ### Testing
+
 - `make test` - Run all tests
 - `make test-verbose` - Run tests with verbose output
 - `make test-coverage` - Run tests with coverage report
 
 ### Code Quality
+
 - `make fmt` - Format code
 - `make vet` - Run go vet
 - `make lint` - Run linter (requires golangci-lint)
 
 ### Cleanup
+
 - `make clean` - Remove build artifacts
 - `make clean-all` - Remove all generated files and logs
 - `make stop` - Stop running processes
 
 ### Docker
+
 - `make docker-build` - Build Docker image
 - `make docker-run` - Run Docker container
 - `make docker-stop` - Stop Docker container
@@ -231,6 +252,7 @@ The project includes a comprehensive Makefile with the following commands:
 - `make docker-setup` - Setup with Docker (start services)
 
 ### Utilities
+
 - `make check-env` - Check if .env.dev file exists
 - `make help` - Show all available commands
 
@@ -241,6 +263,7 @@ For detailed information, run `make help`.
 ### Authentication
 
 #### Sign Up
+
 ```http
 POST /api/auth/signup
 Content-Type: application/json
@@ -253,6 +276,7 @@ Content-Type: application/json
 ```
 
 **Response:**
+
 ```json
 {
   "message": "User created successfully",
@@ -268,6 +292,7 @@ Content-Type: application/json
 ```
 
 #### Login / Sign In
+
 ```http
 POST /api/auth/login
 # or
@@ -281,6 +306,7 @@ Content-Type: application/json
 ```
 
 **Response:**
+
 ```json
 {
   "message": "Login successful",
@@ -298,16 +324,19 @@ Content-Type: application/json
 ### Books
 
 #### Get All Books (Public)
+
 ```http
 GET /api/books
 ```
 
 #### Get Book by ID (Public)
+
 ```http
 GET /api/books/:id
 ```
 
 #### Create Book (Protected)
+
 ```http
 POST /api/books
 Authorization: Bearer <token>
@@ -322,6 +351,7 @@ Content-Type: application/json
 ```
 
 #### Update Book (Protected - Owner only)
+
 ```http
 PUT /api/books/:id
 Authorization: Bearer <token>
@@ -336,6 +366,7 @@ Content-Type: application/json
 ```
 
 #### Delete Book (Protected - Owner only)
+
 ```http
 DELETE /api/books/:id
 Authorization: Bearer <token>
@@ -422,4 +453,3 @@ curl http://localhost:8080/api/books
 ## License
 
 MIT
-

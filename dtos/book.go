@@ -15,10 +15,11 @@ type UpdateBookRequest struct {
 }
 
 type BookResponse struct {
-	ID        uint   `json:"id"`
-	UserID    uint   `json:"user_id"`
-	Author    string `json:"author"`
-	Title     string `json:"title"`
-	Publisher string `json:"publisher"`
-	Year      int    `json:"year"`
+	ID        uint          `json:"id"`
+	UserID    uint          `json:"user_id"`
+	Author    string        `json:"author"`
+	Title     string        `json:"title"`
+	Publisher string        `json:"publisher"`
+	Year      int           `json:"year"`
+	User      *UserResponse `json:"user"`
 }

@@ -27,12 +27,12 @@ func main() {
 
 	// Database connection
 	dbConfig := storage.Config{
-		Host:     cfg.DBHost,
-		Port:     cfg.DBPort,
-		User:     cfg.DBUser,
-		Password: cfg.DBPassword,
-		DBName:   cfg.DBName,
-		SSLMode:  cfg.DBSSLMode,
+		Host:     os.Getenv("DB_HOST"),
+		Port:     os.Getenv("DB_PORT"),
+		User:     os.Getenv("DB_USER"),
+		Password: os.Getenv("DB_PASSWORD"),
+		DBName:   os.Getenv("DB_NAME"),
+		SSLMode:  os.Getenv("DB_SSLMODE"),
 	}
 
 	db, err := storage.NewConnection(dbConfig)
@@ -51,7 +51,7 @@ func main() {
 
 	// Initialize services
 	authService := services.NewAuthService(userRepo, cfg.JWTSecret)
-	bookService := services.NewBookService(bookRepo)
+	bookService := services.NewBookService(bookRepo, userRepo)
 
 	// Initialize controllers
 	authController := controllers.NewAuthController(authService)

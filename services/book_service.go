@@ -2,6 +2,7 @@ package services
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/rakibulbanna/go-fiber-postgres/dtos"
 	"github.com/rakibulbanna/go-fiber-postgres/models"
@@ -24,10 +25,11 @@ type UpdateBookRequest struct {
 
 type BookService struct {
 	bookRepo *repositories.BookRepository
+	userRepo *repositories.UserRepository
 }
 
-func NewBookService(bookRepo *repositories.BookRepository) *BookService {
-	return &BookService{bookRepo: bookRepo}
+func NewBookService(bookRepo *repositories.BookRepository, userRepo *repositories.UserRepository) *BookService {
+	return &BookService{bookRepo: bookRepo, userRepo: userRepo}
 }
 
 func (s *BookService) CreateBook(userID uint, req *CreateBookRequest) (*dtos.BookResponse, error) {
@@ -53,41 +55,22 @@ func (s *BookService) CreateBook(userID uint, req *CreateBookRequest) (*dtos.Boo
 	}, nil
 }
 
-func (s *BookService) GetAllBooks() ([]dtos.BookResponse, error) {
-	books, err := s.bookRepo.FindAll()
+func (s *BookService) GetAllBooks() ([]models.Book, error) {
+	books, err := s.bookRepo.FindAllWithUsers()
 	if err != nil {
 		return nil, errors.New("failed to fetch books")
 	}
-
-	var response []dtos.BookResponse
-	for _, book := range books {
-		response = append(response, dtos.BookResponse{
-			ID:        book.Id,
-			UserID:    book.UserID,
-			Author:    book.Author,
-			Title:     book.Title,
-			Publisher: book.Publisher,
-			Year:      book.Year,
-		})
-	}
-
-	return response, nil
+	fmt.Println("books____: ", books)
+	return books, nil
 }
 
-func (s *BookService) GetBookByID(id uint) (*dtos.BookResponse, error) {
+func (s *BookService) GetBookByID(id uint) (*models.Book, error) {
 	book, err := s.bookRepo.FindByID(id)
 	if err != nil {
 		return nil, errors.New("book not found")
 	}
 
-	return &dtos.BookResponse{
-		ID:        book.Id,
-		UserID:    book.UserID,
-		Author:    book.Author,
-		Title:     book.Title,
-		Publisher: book.Publisher,
-		Year:      book.Year,
-	}, nil
+	return book, nil
 }
 
 func (s *BookService) UpdateBook(id uint, userID uint, req *UpdateBookRequest) (*dtos.BookResponse, error) {

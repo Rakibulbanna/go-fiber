@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"fmt"
 	"strconv"
 
 	"github.com/gofiber/fiber/v2"
@@ -64,6 +65,7 @@ func (c *BookController) CreateBook(ctx *fiber.Ctx) error {
 }
 
 func (c *BookController) GetBooks(ctx *fiber.Ctx) error {
+	fmt.Println("GetBooks____: ")
 	books, err := c.bookService.GetAllBooks()
 	if err != nil {
 		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
