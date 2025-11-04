@@ -1,0 +1,62 @@
+version: '3.8'
+
+# Development docker-compose with hot reload
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: go-fiber-postgres-dev
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_DB: ${DB_NAME:-go_fiber_db}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - postgres_data_dev:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - go-fiber-network-dev
+    restart: unless-stopped
+
+  # Go Fiber API (Development with hot reload)
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: go-fiber-api-dev
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
+      DB_NAME: ${DB_NAME:-go_fiber_db}
+      DB_SSLMODE: disable
+      JWT_SECRET: ${JWT_SECRET:-dev-secret-key}
+      PORT: ${PORT:-8080}
+    ports:
+      - "${PORT:-8080}:8080"
+    volumes:
+      - .:/app
+      - /app/tmp
+      - /app/go/pkg
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - go-fiber-network-dev
+    restart: unless-stopped
+    command: air
+
+volumes:
+  postgres_data_dev:
+    driver: local
+
+networks:
+  go-fiber-network-dev:
+    driver: bridge
+

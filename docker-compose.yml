@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: go-fiber-postgres
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_DB: ${DB_NAME:-go_fiber_db}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - go-fiber-network
+    restart: unless-stopped
+
+  # Go Fiber API
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: go-fiber-api
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
+      DB_NAME: ${DB_NAME:-go_fiber_db}
+      DB_SSLMODE: disable
+      JWT_SECRET: ${JWT_SECRET:-your-secret-key-change-in-production}
+      PORT: ${PORT:-8080}
+      ENV_FILE: .env.dev
+    ports:
+      - "${PORT:-8080}:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - go-fiber-network
+    restart: unless-stopped
+    command: ./main
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  go-fiber-network:
+    driver: bridge
+

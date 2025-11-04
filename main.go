@@ -1,120 +1,88 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"os"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/joho/godotenv"
+	"github.com/gofiber/fiber/v2/middleware/logger"
+	"github.com/gofiber/fiber/v2/middleware/recover"
+	"github.com/rakibulbanna/go-fiber-postgres/config"
+	"github.com/rakibulbanna/go-fiber-postgres/controllers"
+	"github.com/rakibulbanna/go-fiber-postgres/middleware"
 	"github.com/rakibulbanna/go-fiber-postgres/models"
+	"github.com/rakibulbanna/go-fiber-postgres/repositories"
+	"github.com/rakibulbanna/go-fiber-postgres/routes"
+	"github.com/rakibulbanna/go-fiber-postgres/services"
 	"github.com/rakibulbanna/go-fiber-postgres/storage"
-	"gorm.io/gorm"
 )
 
-type Repository struct {
-	DB *gorm.DB
-}
-
-func (r *Repository) GetBooks(c *fiber.Ctx) error {
-	var books []models.Book
-	err := r.DB.Find(&books).Error
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
-	}
-	return c.Status(fiber.StatusOK).JSON(fiber.Map{"data": books})
-}
-func (r *Repository) GetBook(c *fiber.Ctx) error {
-
-	id := c.Params("id")
-	if id == "" {
-		c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "ID is required"})
-		return nil
-	}
-	fmt.Println("id____: ", id)
-	bookModel := &models.Book{}
-	err := r.DB.Where("id = ?", id).First(bookModel).Error
-	if err != nil {
-		c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to get book"})
-		return err
-	}
-	c.Status(fiber.StatusOK).JSON(fiber.Map{"data": bookModel})
-	return nil
-}
-func (r *Repository) UpdateBook(c *fiber.Ctx) error {
-	var book models.Book
-	err := r.DB.Where("id = ?", c.Params("id")).First(&book).Error
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
-	}
-	return c.Status(fiber.StatusOK).JSON(fiber.Map{"data": book})
-}
-func (r *Repository) DeleteBook(c *fiber.Ctx) error {
-	bookModel := models.Book{}
-	id := c.Params("id")
-	if id == "" {
-		c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "ID is required"})
-		return nil
-	}
-	err := r.DB.Delete(&bookModel, id)
-	if err.Error != nil {
-		c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to delete book"})
-		return nil
-	}
-	c.Status(fiber.StatusOK).JSON(fiber.Map{"message": "Book deleted successfully"})
-	return nil
-}
-func (r *Repository) CreateBook(c *fiber.Ctx) error {
-	var book models.Book
-	if err := c.BodyParser(&book); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
-	}
-	err := r.DB.Create(&book).Error
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
-	}
-
-	return c.Status(fiber.StatusOK).JSON(fiber.Map{"message": "Book created successfully"})
-}
-func (r *Repository) SetupRoutes(app *fiber.App) {
-	api := app.Group("/api")
-	api.Post("/create_books", r.CreateBook)
-	api.Get("/get_books", r.GetBooks)
-	api.Get("/get_book/:id", r.GetBook)
-	api.Put("/update_book/:id", r.UpdateBook)
-	api.Delete("/delete_book/:id", r.DeleteBook)
-}
 func main() {
-	err := godotenv.Load(".env")
+	// Load configuration
+	envFile := os.Getenv("ENV_FILE")
+	if envFile == "" {
+		envFile = ".env.dev"
+	}
+	cfg := config.LoadConfig(envFile)
+
+	// Database connection
+	dbConfig := storage.Config{
+		Host:     cfg.DBHost,
+		Port:     cfg.DBPort,
+		User:     cfg.DBUser,
+		Password: cfg.DBPassword,
+		DBName:   cfg.DBName,
+		SSLMode:  cfg.DBSSLMode,
+	}
+
+	db, err := storage.NewConnection(dbConfig)
 	if err != nil {
-		log.Fatal("Error loading .env file")
-	}
-	config := storage.Config{
-		Host:     os.Getenv("DB_HOST"),
-		Port:     os.Getenv("DB_PORT"),
-		User:     os.Getenv("DB_USER"),
-		Password: os.Getenv("DB_PASSWORD"),
-		DBName:   os.Getenv("DB_NAME"),
-		SSLMode:  os.Getenv("DB_SSLMODE"),
+		log.Fatal("Error connecting to database: ", err)
 	}
 
-	db, err := storage.NewConnection(config)
-	if err != nil {
-		log.Fatal("Error connecting to database")
+	// Run migrations
+	if err := models.RunMigrations(db); err != nil {
+		log.Fatal("Error running migrations: ", err)
 	}
 
-	// Run database migrations
-	err = models.MigrateBooks(db)
-	if err != nil {
-		log.Fatal("Error migrating database")
+	// Initialize repositories
+	userRepo := repositories.NewUserRepository(db)
+	bookRepo := repositories.NewBookRepository(db)
+
+	// Initialize services
+	authService := services.NewAuthService(userRepo, cfg.JWTSecret)
+	bookService := services.NewBookService(bookRepo)
+
+	// Initialize controllers
+	authController := controllers.NewAuthController(authService)
+	bookController := controllers.NewBookController(bookService)
+
+	// Initialize middleware
+	authMiddleware := middleware.NewAuthMiddleware(cfg.JWTSecret)
+
+	// Initialize Fiber app
+	app := fiber.New(fiber.Config{
+		ErrorHandler: func(c *fiber.Ctx, err error) error {
+			code := fiber.StatusInternalServerError
+			if e, ok := err.(*fiber.Error); ok {
+				code = e.Code
+			}
+			return c.Status(code).JSON(fiber.Map{
+				"error": err.Error(),
+			})
+		},
+	})
+
+	// Middleware
+	app.Use(recover.New())
+	app.Use(logger.New())
+
+	// Setup routes
+	routes.SetupRoutes(app, authController, bookController, authMiddleware)
+
+	// Start server
+	log.Printf("Server starting on port %s", cfg.Port)
+	if err := app.Listen(":" + cfg.Port); err != nil {
+		log.Fatal("Error starting server: ", err)
 	}
-
-	r := Repository{
-		DB: db,
-	}
-	app := fiber.New()
-
-	r.SetupRoutes(app)
-
-	app.Listen(":8080")
 }

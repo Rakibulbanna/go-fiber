@@ -12,6 +12,7 @@ bin/
 
 # Output of the go coverage tool
 *.out
+coverage.html
 
 # Dependency directories
 vendor/
@@ -40,7 +41,22 @@ Thumbs.db
 # Logs
 *.log
 build-errors.log
+air.log
+
+# Git
+.git
+.gitignore
 
 # Air
 tmp/
+.air.toml
+
+# Documentation
+README.md
+TESTING_GUIDE.md
+*.md
+
+# Test scripts
+test_*.ps1
+test_*.sh
 
