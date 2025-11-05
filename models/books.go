@@ -1,6 +1,8 @@
 package models
 
-import "gorm.io/gorm"
+// import (
+// 	"gorm.io/gorm"
+// )
 
 type Book struct {
 	Id        uint   `gorm:"primaryKey;autoIncrement" json:"id"`
@@ -12,7 +14,7 @@ type Book struct {
 	User      User   `gorm:"foreignKey:UserID" json:"user,omitempty"`
 }
 
-func MigrateBooks(db *gorm.DB) error {
-	err := db.AutoMigrate(&Book{})
-	return err
-}
+// func MigrateBooks(db *gorm.DB) error {
+// 	err := db.AutoMigrate(&Book{})
+// 	return err
+// }

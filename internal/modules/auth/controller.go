@@ -1,24 +1,20 @@
-package controllers
+package auth
 
 import (
 	"github.com/gofiber/fiber/v2"
-	"github.com/rakibulbanna/go-fiber-postgres/services"
+	"github.com/rakibulbanna/go-fiber-postgres/dtos"
 )
 
-type AuthController struct {
-	authService *services.AuthService
+type Controller struct {
+	service *Service
 }
 
-func NewAuthController(authService *services.AuthService) *AuthController {
-	return &AuthController{authService: authService}
+func NewController(service *Service) *Controller {
+	return &Controller{service: service}
 }
 
-func (c *AuthController) SignUp(ctx *fiber.Ctx) error {
-	var req struct {
-		Email    string `json:"email"`
-		Password string `json:"password"`
-		Name     string `json:"name"`
-	}
+func (c *Controller) SignUp(ctx *fiber.Ctx) error {
+	var req dtos.SignUpRequest
 
 	if err := ctx.BodyParser(&req); err != nil {
 		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -39,13 +35,7 @@ func (c *AuthController) SignUp(ctx *fiber.Ctx) error {
 		})
 	}
 
-	signUpReq := &services.SignUpRequest{
-		Email:    req.Email,
-		Password: req.Password,
-		Name:     req.Name,
-	}
-
-	response, err := c.authService.SignUp(signUpReq)
+	response, err := c.service.SignUp(&req)
 	if err != nil {
 		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": err.Error(),
@@ -58,11 +48,8 @@ func (c *AuthController) SignUp(ctx *fiber.Ctx) error {
 	})
 }
 
-func (c *AuthController) Login(ctx *fiber.Ctx) error {
-	var req struct {
-		Email    string `json:"email"`
-		Password string `json:"password"`
-	}
+func (c *Controller) Login(ctx *fiber.Ctx) error {
+	var req dtos.LoginRequest
 
 	if err := ctx.BodyParser(&req); err != nil {
 		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -76,12 +63,7 @@ func (c *AuthController) Login(ctx *fiber.Ctx) error {
 		})
 	}
 
-	loginReq := &services.LoginRequest{
-		Email:    req.Email,
-		Password: req.Password,
-	}
-
-	response, err := c.authService.Login(loginReq)
+	response, err := c.service.Login(&req)
 	if err != nil {
 		return ctx.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
 			"error": err.Error(),
@@ -93,3 +75,4 @@ func (c *AuthController) Login(ctx *fiber.Ctx) error {
 		"data":    response,
 	})
 }
+

@@ -1,41 +1,30 @@
-package services
+package auth
 
 import (
 	"errors"
 
 	"github.com/rakibulbanna/go-fiber-postgres/dtos"
 	"github.com/rakibulbanna/go-fiber-postgres/models"
-	"github.com/rakibulbanna/go-fiber-postgres/repositories"
 	"github.com/rakibulbanna/go-fiber-postgres/utils"
+	"gorm.io/gorm"
 )
 
-type SignUpRequest struct {
-	Email    string
-	Password string
-	Name     string
-}
-
-type LoginRequest struct {
-	Email    string
-	Password string
-}
-
-type AuthService struct {
-	userRepo  *repositories.UserRepository
+type Service struct {
+	db        *gorm.DB
 	jwtSecret string
 }
 
-func NewAuthService(userRepo *repositories.UserRepository, jwtSecret string) *AuthService {
-	return &AuthService{
-		userRepo:  userRepo,
+func NewService(db *gorm.DB, jwtSecret string) *Service {
+	return &Service{
+		db:        db,
 		jwtSecret: jwtSecret,
 	}
 }
 
-func (s *AuthService) SignUp(req *SignUpRequest) (*dtos.AuthResponse, error) {
+func (s *Service) SignUp(req *dtos.SignUpRequest) (*dtos.AuthResponse, error) {
 	// Check if user already exists
-	existingUser, _ := s.userRepo.FindByEmail(req.Email)
-	if existingUser != nil {
+	var existingUser models.User
+	if err := s.db.Where("email = ?", req.Email).First(&existingUser).Error; err == nil {
 		return nil, errors.New("user with this email already exists")
 	}
 
@@ -52,7 +41,7 @@ func (s *AuthService) SignUp(req *SignUpRequest) (*dtos.AuthResponse, error) {
 		Name:     req.Name,
 	}
 
-	if err := s.userRepo.Create(user); err != nil {
+	if err := s.db.Create(user).Error; err != nil {
 		return nil, errors.New("failed to create user")
 	}
 
@@ -72,10 +61,10 @@ func (s *AuthService) SignUp(req *SignUpRequest) (*dtos.AuthResponse, error) {
 	}, nil
 }
 
-func (s *AuthService) Login(req *LoginRequest) (*dtos.AuthResponse, error) {
+func (s *Service) Login(req *dtos.LoginRequest) (*dtos.AuthResponse, error) {
 	// Find user by email
-	user, err := s.userRepo.FindByEmail(req.Email)
-	if err != nil {
+	var user models.User
+	if err := s.db.Where("email = ?", req.Email).First(&user).Error; err != nil {
 		return nil, errors.New("invalid email or password")
 	}
 
@@ -99,3 +88,12 @@ func (s *AuthService) Login(req *LoginRequest) (*dtos.AuthResponse, error) {
 		},
 	}, nil
 }
+
+func (s *Service) FindUserByID(id uint) (*models.User, error) {
+	var user models.User
+	if err := s.db.First(&user, id).Error; err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
+

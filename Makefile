@@ -1,6 +1,6 @@
 # Makefile for Go Fiber API Project
 
-.PHONY: help migrate build run test clean deps lint format air docker-build docker-run docker-up docker-down docker-dev docker-logs docker-clean docker-ps docker-setup stop install-tools
+.PHONY: help migrate migrate-up migrate-down migrate-new migrate-apply migrate-status build run test clean deps lint format air docker-build docker-run docker-up docker-down docker-dev docker-logs docker-clean docker-ps docker-setup stop install-tools install-atlas
 
 # Variables
 BINARY_NAME=main
@@ -33,9 +33,13 @@ help:
 	@echo "  make deps          - Download and install dependencies"
 	@echo "  make tidy          - Clean up dependencies"
 	@echo "  make install-tools - Install required tools (air, etc.)"
+	@echo "  make install-atlas - Install Atlas migration tool"
 	@echo ""
-	@echo "$(GREEN)Database:$(NC)"
-	@echo "  make migrate       - Run database migrations"
+	@echo "$(GREEN)Database Migrations (Atlas):$(NC)"
+	@echo "  make migrate-apply - Apply pending migrations"
+	@echo "  make migrate-down  - Rollback last migration"
+	@echo "  make migrate-status - Check migration status"
+	@echo "  make migrate-new   - Create new migration (use MIGRATION_NAME=name)"
 	@echo ""
 	@echo "$(GREEN)Build & Run:$(NC)"
 	@echo "  make build         - Build the application"
@@ -100,12 +104,77 @@ install-tools:
 	fi
 	@echo "$(GREEN)✓ Tools installed$(NC)"
 
-## migrate: Run database migrations (migrations run automatically on startup)
-migrate:
-	@echo "$(CYAN)Note: Migrations run automatically when the application starts$(NC)"
-	@echo "$(CYAN)Starting application to run migrations...$(NC)"
-	@$(GO_RUN) $(MAIN_PATH) || true
-	@echo "$(GREEN)✓ Migrations completed$(NC)"
+## install-atlas: Install Atlas migration tool
+install-atlas:
+	@echo "$(CYAN)Installing Atlas...$(NC)"
+	@if command -v atlas > /dev/null; then \
+		echo "$(GREEN)✓ Atlas already installed$(NC)"; \
+	else \
+		echo "$(YELLOW)Installing Atlas...$(NC)"; \
+		curl -sSf https://atlasgo.sh | sh; \
+	fi
+	@echo "$(GREEN)✓ Atlas installed$(NC)"
+
+## migrate-apply: Apply pending migrations using Atlas
+migrate-apply: check-env
+	@echo "$(CYAN)Applying migrations with Atlas...$(NC)"
+	@if ! command -v atlas > /dev/null; then \
+		echo "$(RED)✗ Atlas is not installed. Run 'make install-atlas' first$(NC)"; \
+		exit 1; \
+	fi
+	@if [ -f "$(ENV_FILE)" ]; then \
+		export $$(cat $(ENV_FILE) | grep -v '^#' | xargs); \
+		atlas migrate apply --env local --var "db_url=postgres://$$DB_USER:$$DB_PASSWORD@$$DB_HOST:$$DB_PORT/$$DB_NAME?sslmode=$$DB_SSLMODE"; \
+	else \
+		echo "$(YELLOW)⚠ Warning: $(ENV_FILE) not found, using default connection$(NC)"; \
+		atlas migrate apply --env local; \
+	fi
+	@echo "$(GREEN)✓ Migrations applied$(NC)"
+
+## migrate-down: Rollback last migration
+migrate-down: check-env
+	@echo "$(CYAN)Rolling back last migration...$(NC)"
+	@if ! command -v atlas > /dev/null; then \
+		echo "$(RED)✗ Atlas is not installed. Run 'make install-atlas' first$(NC)"; \
+		exit 1; \
+	fi
+	@if [ -f "$(ENV_FILE)" ]; then \
+		export $$(cat $(ENV_FILE) | grep -v '^#' | xargs); \
+		atlas migrate down --env local --var "db_url=postgres://$$DB_USER:$$DB_PASSWORD@$$DB_HOST:$$DB_PORT/$$DB_NAME?sslmode=$$DB_SSLMODE" 1; \
+	else \
+		echo "$(YELLOW)⚠ Warning: $(ENV_FILE) not found, using default connection$(NC)"; \
+		atlas migrate down --env local 1; \
+	fi
+	@echo "$(GREEN)✓ Migration rolled back$(NC)"
+
+## migrate-status: Check migration status
+migrate-status: check-env
+	@echo "$(CYAN)Checking migration status...$(NC)"
+	@if ! command -v atlas > /dev/null; then \
+		echo "$(RED)✗ Atlas is not installed. Run 'make install-atlas' first$(NC)"; \
+		exit 1; \
+	fi
+	@if [ -f "$(ENV_FILE)" ]; then \
+		export $$(cat $(ENV_FILE) | grep -v '^#' | xargs); \
+		atlas migrate status --env local --var "db_url=postgres://$$DB_USER:$$DB_PASSWORD@$$DB_HOST:$$DB_PORT/$$DB_NAME?sslmode=$$DB_SSLMODE"; \
+	else \
+		echo "$(YELLOW)⚠ Warning: $(ENV_FILE) not found, using default connection$(NC)"; \
+		atlas migrate status --env local; \
+	fi
+
+## migrate-new: Create new migration file
+migrate-new: check-env
+	@if [ -z "$(MIGRATION_NAME)" ]; then \
+		echo "$(RED)✗ MIGRATION_NAME is required. Example: make migrate-new MIGRATION_NAME=add_user_table$(NC)"; \
+		exit 1; \
+	fi
+	@echo "$(CYAN)Creating new migration: $(MIGRATION_NAME)...$(NC)"
+	@if ! command -v atlas > /dev/null; then \
+		echo "$(RED)✗ Atlas is not installed. Run 'make install-atlas' first$(NC)"; \
+		exit 1; \
+	fi
+	@atlas migrate new --dir file://migrations $(MIGRATION_NAME)
+	@echo "$(GREEN)✓ Migration created$(NC)"
 
 ## build: Build the application
 build:

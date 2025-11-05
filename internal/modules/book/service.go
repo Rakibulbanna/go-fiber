@@ -1,38 +1,22 @@
-package services
+package book
 
 import (
 	"errors"
-	"fmt"
 
 	"github.com/rakibulbanna/go-fiber-postgres/dtos"
 	"github.com/rakibulbanna/go-fiber-postgres/models"
-	"github.com/rakibulbanna/go-fiber-postgres/repositories"
+	"gorm.io/gorm"
 )
 
-type CreateBookRequest struct {
-	Author    string
-	Title     string
-	Publisher string
-	Year      int
+type Service struct {
+	db *gorm.DB
 }
 
-type UpdateBookRequest struct {
-	Author    string
-	Title     string
-	Publisher string
-	Year      int
+func NewService(db *gorm.DB) *Service {
+	return &Service{db: db}
 }
 
-type BookService struct {
-	bookRepo *repositories.BookRepository
-	userRepo *repositories.UserRepository
-}
-
-func NewBookService(bookRepo *repositories.BookRepository, userRepo *repositories.UserRepository) *BookService {
-	return &BookService{bookRepo: bookRepo, userRepo: userRepo}
-}
-
-func (s *BookService) CreateBook(userID uint, req *CreateBookRequest) (*dtos.BookResponse, error) {
+func (s *Service) CreateBook(userID uint, req *dtos.CreateBookRequest) (*dtos.BookResponse, error) {
 	book := &models.Book{
 		UserID:    userID,
 		Author:    req.Author,
@@ -41,7 +25,7 @@ func (s *BookService) CreateBook(userID uint, req *CreateBookRequest) (*dtos.Boo
 		Year:      req.Year,
 	}
 
-	if err := s.bookRepo.Create(book); err != nil {
+	if err := s.db.Create(book).Error; err != nil {
 		return nil, errors.New("failed to create book")
 	}
 
@@ -55,27 +39,25 @@ func (s *BookService) CreateBook(userID uint, req *CreateBookRequest) (*dtos.Boo
 	}, nil
 }
 
-func (s *BookService) GetAllBooks() ([]models.Book, error) {
-	books, err := s.bookRepo.FindAllWithUsers()
-	if err != nil {
+func (s *Service) GetAllBooks() ([]models.Book, error) {
+	var books []models.Book
+	if err := s.db.Joins("User").Find(&books).Error; err != nil {
 		return nil, errors.New("failed to fetch books")
 	}
-	fmt.Println("books____: ", books)
 	return books, nil
 }
 
-func (s *BookService) GetBookByID(id uint) (*models.Book, error) {
-	book, err := s.bookRepo.FindByID(id)
-	if err != nil {
+func (s *Service) GetBookByID(id uint) (*models.Book, error) {
+	var book models.Book
+	if err := s.db.Joins("User").First(&book, id).Error; err != nil {
 		return nil, errors.New("book not found")
 	}
-
-	return book, nil
+	return &book, nil
 }
 
-func (s *BookService) UpdateBook(id uint, userID uint, req *UpdateBookRequest) (*dtos.BookResponse, error) {
-	book, err := s.bookRepo.FindByID(id)
-	if err != nil {
+func (s *Service) UpdateBook(id uint, userID uint, req *dtos.UpdateBookRequest) (*dtos.BookResponse, error) {
+	var book models.Book
+	if err := s.db.First(&book, id).Error; err != nil {
 		return nil, errors.New("book not found")
 	}
 
@@ -97,7 +79,7 @@ func (s *BookService) UpdateBook(id uint, userID uint, req *UpdateBookRequest) (
 		book.Year = req.Year
 	}
 
-	if err := s.bookRepo.Update(book); err != nil {
+	if err := s.db.Save(&book).Error; err != nil {
 		return nil, errors.New("failed to update book")
 	}
 
@@ -111,9 +93,9 @@ func (s *BookService) UpdateBook(id uint, userID uint, req *UpdateBookRequest) (
 	}, nil
 }
 
-func (s *BookService) DeleteBook(id uint, userID uint) error {
-	book, err := s.bookRepo.FindByID(id)
-	if err != nil {
+func (s *Service) DeleteBook(id uint, userID uint) error {
+	var book models.Book
+	if err := s.db.First(&book, id).Error; err != nil {
 		return errors.New("book not found")
 	}
 
@@ -122,8 +104,9 @@ func (s *BookService) DeleteBook(id uint, userID uint) error {
 		return errors.New("unauthorized: you can only delete your own books")
 	}
 
-	if err := s.bookRepo.Delete(id); err != nil {
+	if err := s.db.Delete(&book).Error; err != nil {
 		return errors.New("failed to delete book")
 	}
 	return nil
 }
+

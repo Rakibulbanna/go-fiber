@@ -8,12 +8,9 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/recover"
 	"github.com/rakibulbanna/go-fiber-postgres/config"
-	"github.com/rakibulbanna/go-fiber-postgres/controllers"
+	authModule "github.com/rakibulbanna/go-fiber-postgres/internal/modules/auth"
+	bookModule "github.com/rakibulbanna/go-fiber-postgres/internal/modules/book"
 	"github.com/rakibulbanna/go-fiber-postgres/middleware"
-	"github.com/rakibulbanna/go-fiber-postgres/models"
-	"github.com/rakibulbanna/go-fiber-postgres/repositories"
-	"github.com/rakibulbanna/go-fiber-postgres/routes"
-	"github.com/rakibulbanna/go-fiber-postgres/services"
 	"github.com/rakibulbanna/go-fiber-postgres/storage"
 )
 
@@ -40,25 +37,15 @@ func main() {
 		log.Fatal("Error connecting to database: ", err)
 	}
 
-	// Run migrations
-	if err := models.RunMigrations(db); err != nil {
-		log.Fatal("Error running migrations: ", err)
-	}
-
-	// Initialize repositories
-	userRepo := repositories.NewUserRepository(db)
-	bookRepo := repositories.NewBookRepository(db)
-
-	// Initialize services
-	authService := services.NewAuthService(userRepo, cfg.JWTSecret)
-	bookService := services.NewBookService(bookRepo, userRepo)
-
-	// Initialize controllers
-	authController := controllers.NewAuthController(authService)
-	bookController := controllers.NewBookController(bookService)
-
 	// Initialize middleware
 	authMiddleware := middleware.NewAuthMiddleware(cfg.JWTSecret)
+
+	// Initialize modules
+	authService := authModule.NewService(db, cfg.JWTSecret)
+	authController := authModule.NewController(authService)
+
+	bookService := bookModule.NewService(db)
+	bookController := bookModule.NewController(bookService)
 
 	// Initialize Fiber app
 	app := fiber.New(fiber.Config{
@@ -78,7 +65,9 @@ func main() {
 	app.Use(logger.New())
 
 	// Setup routes
-	routes.SetupRoutes(app, authController, bookController, authMiddleware)
+	api := app.Group("/api")
+	authModule.SetupRoutes(api, authController)
+	bookModule.SetupRoutes(api, bookController, authMiddleware)
 
 	// Start server
 	log.Printf("Server starting on port %s", cfg.Port)

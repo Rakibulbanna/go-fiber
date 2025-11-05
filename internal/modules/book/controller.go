@@ -1,28 +1,22 @@
-package controllers
+package book
 
 import (
-	"fmt"
 	"strconv"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/rakibulbanna/go-fiber-postgres/services"
+	"github.com/rakibulbanna/go-fiber-postgres/dtos"
 )
 
-type BookController struct {
-	bookService *services.BookService
+type Controller struct {
+	service *Service
 }
 
-func NewBookController(bookService *services.BookService) *BookController {
-	return &BookController{bookService: bookService}
+func NewController(service *Service) *Controller {
+	return &Controller{service: service}
 }
 
-func (c *BookController) CreateBook(ctx *fiber.Ctx) error {
-	var req struct {
-		Author    string `json:"author"`
-		Title     string `json:"title"`
-		Publisher string `json:"publisher"`
-		Year      int    `json:"year"`
-	}
+func (c *Controller) CreateBook(ctx *fiber.Ctx) error {
+	var req dtos.CreateBookRequest
 
 	if err := ctx.BodyParser(&req); err != nil {
 		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -44,14 +38,7 @@ func (c *BookController) CreateBook(ctx *fiber.Ctx) error {
 		})
 	}
 
-	createReq := &services.CreateBookRequest{
-		Author:    req.Author,
-		Title:     req.Title,
-		Publisher: req.Publisher,
-		Year:      req.Year,
-	}
-
-	book, err := c.bookService.CreateBook(userID, createReq)
+	book, err := c.service.CreateBook(userID, &req)
 	if err != nil {
 		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": err.Error(),
@@ -64,9 +51,8 @@ func (c *BookController) CreateBook(ctx *fiber.Ctx) error {
 	})
 }
 
-func (c *BookController) GetBooks(ctx *fiber.Ctx) error {
-	fmt.Println("GetBooks____: ")
-	books, err := c.bookService.GetAllBooks()
+func (c *Controller) GetBooks(ctx *fiber.Ctx) error {
+	books, err := c.service.GetAllBooks()
 	if err != nil {
 		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": err.Error(),
@@ -78,7 +64,7 @@ func (c *BookController) GetBooks(ctx *fiber.Ctx) error {
 	})
 }
 
-func (c *BookController) GetBook(ctx *fiber.Ctx) error {
+func (c *Controller) GetBook(ctx *fiber.Ctx) error {
 	idParam := ctx.Params("id")
 	if idParam == "" {
 		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -93,7 +79,7 @@ func (c *BookController) GetBook(ctx *fiber.Ctx) error {
 		})
 	}
 
-	book, err := c.bookService.GetBookByID(uint(id))
+	book, err := c.service.GetBookByID(uint(id))
 	if err != nil {
 		return ctx.Status(fiber.StatusNotFound).JSON(fiber.Map{
 			"error": err.Error(),
@@ -105,7 +91,7 @@ func (c *BookController) GetBook(ctx *fiber.Ctx) error {
 	})
 }
 
-func (c *BookController) UpdateBook(ctx *fiber.Ctx) error {
+func (c *Controller) UpdateBook(ctx *fiber.Ctx) error {
 	idParam := ctx.Params("id")
 	if idParam == "" {
 		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -120,12 +106,7 @@ func (c *BookController) UpdateBook(ctx *fiber.Ctx) error {
 		})
 	}
 
-	var req struct {
-		Author    string `json:"author"`
-		Title     string `json:"title"`
-		Publisher string `json:"publisher"`
-		Year      int    `json:"year"`
-	}
+	var req dtos.UpdateBookRequest
 
 	if err := ctx.BodyParser(&req); err != nil {
 		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -141,14 +122,7 @@ func (c *BookController) UpdateBook(ctx *fiber.Ctx) error {
 		})
 	}
 
-	updateReq := &services.UpdateBookRequest{
-		Author:    req.Author,
-		Title:     req.Title,
-		Publisher: req.Publisher,
-		Year:      req.Year,
-	}
-
-	book, err := c.bookService.UpdateBook(uint(id), userID, updateReq)
+	book, err := c.service.UpdateBook(uint(id), userID, &req)
 	if err != nil {
 		return ctx.Status(fiber.StatusNotFound).JSON(fiber.Map{
 			"error": err.Error(),
@@ -161,7 +135,7 @@ func (c *BookController) UpdateBook(ctx *fiber.Ctx) error {
 	})
 }
 
-func (c *BookController) DeleteBook(ctx *fiber.Ctx) error {
+func (c *Controller) DeleteBook(ctx *fiber.Ctx) error {
 	idParam := ctx.Params("id")
 	if idParam == "" {
 		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -184,7 +158,7 @@ func (c *BookController) DeleteBook(ctx *fiber.Ctx) error {
 		})
 	}
 
-	if err := c.bookService.DeleteBook(uint(id), userID); err != nil {
+	if err := c.service.DeleteBook(uint(id), userID); err != nil {
 		return ctx.Status(fiber.StatusNotFound).JSON(fiber.Map{
 			"error": err.Error(),
 		})
@@ -194,3 +168,4 @@ func (c *BookController) DeleteBook(ctx *fiber.Ctx) error {
 		"message": "Book deleted successfully",
 	})
 }
+

@@ -16,6 +16,6 @@ type User struct {
 	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
 }
 
-func MigrateUser(db *gorm.DB) error {
-	return db.AutoMigrate(&User{})
-}
+// func MigrateUser(db *gorm.DB) error {
+// 	return db.AutoMigrate(&User{})
+// }
