@@ -35,11 +35,11 @@ help:
 	@echo "  make install-tools - Install required tools (air, etc.)"
 	@echo "  make install-atlas - Install Atlas migration tool"
 	@echo ""
-	@echo "$(GREEN)Database Migrations (Atlas):$(NC)"
-	@echo "  make migrate-apply - Apply pending migrations"
-	@echo "  make migrate-down  - Rollback last migration"
+	@echo "$(GREEN)Database Migrations (Atlas with GORM):$(NC)"
+	@echo "  make migrate-diff   - Generate migrations from GORM models"
+	@echo "  make migrate-apply  - Apply pending migrations"
+	@echo "  make migrate-down   - Rollback last migration"
 	@echo "  make migrate-status - Check migration status"
-	@echo "  make migrate-new   - Create new migration (use MIGRATION_NAME=name)"
 	@echo ""
 	@echo "$(GREEN)Build & Run:$(NC)"
 	@echo "  make build         - Build the application"
@@ -127,7 +127,7 @@ migrate-apply: check-env
 		atlas migrate apply --env local --var "db_url=postgres://$$DB_USER:$$DB_PASSWORD@$$DB_HOST:$$DB_PORT/$$DB_NAME?sslmode=$$DB_SSLMODE"; \
 	else \
 		echo "$(YELLOW)⚠ Warning: $(ENV_FILE) not found, using default connection$(NC)"; \
-		atlas migrate apply --env local; \
+		atlas migrate apply --env local --var "db_url=$(db_url)"; \
 	fi
 	@echo "$(GREEN)✓ Migrations applied$(NC)"
 
@@ -162,19 +162,21 @@ migrate-status: check-env
 		atlas migrate status --env local; \
 	fi
 
-## migrate-new: Create new migration file
-migrate-new: check-env
-	@if [ -z "$(MIGRATION_NAME)" ]; then \
-		echo "$(RED)✗ MIGRATION_NAME is required. Example: make migrate-new MIGRATION_NAME=add_user_table$(NC)"; \
-		exit 1; \
-	fi
-	@echo "$(CYAN)Creating new migration: $(MIGRATION_NAME)...$(NC)"
+## migrate-diff: Generate migrations from GORM models
+migrate-diff: check-env
+	@echo "$(CYAN)Generating migrations from GORM models...$(NC)"
 	@if ! command -v atlas > /dev/null; then \
 		echo "$(RED)✗ Atlas is not installed. Run 'make install-atlas' first$(NC)"; \
 		exit 1; \
 	fi
-	@atlas migrate new --dir file://migrations $(MIGRATION_NAME)
-	@echo "$(GREEN)✓ Migration created$(NC)"
+	@if [ -f "$(ENV_FILE)" ]; then \
+		export $$(cat $(ENV_FILE) | grep -v '^#' | xargs); \
+		atlas migrate diff --env gorm --var "db_url=postgres://$$DB_USER:$$DB_PASSWORD@$$DB_HOST:$$DB_PORT/$$DB_NAME?sslmode=$$DB_SSLMODE"; \
+	else \
+		echo "$(YELLOW)⚠ Warning: $(ENV_FILE) not found, using default connection$(NC)"; \
+		atlas migrate diff --env gorm; \
+	fi
+	@echo "$(GREEN)✓ Migrations generated from GORM models$(NC)"
 
 ## build: Build the application
 build:

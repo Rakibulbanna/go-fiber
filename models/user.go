@@ -15,7 +15,3 @@ type User struct {
 	UpdatedAt time.Time      `json:"updated_at"`
 	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
 }
-
-// func MigrateUser(db *gorm.DB) error {
-// 	return db.AutoMigrate(&User{})
-// }

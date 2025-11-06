@@ -1,9 +1,5 @@
 package models
 
-// import (
-// 	"gorm.io/gorm"
-// )
-
 type Book struct {
 	Id        uint   `gorm:"primaryKey;autoIncrement" json:"id"`
 	UserID    uint   `gorm:"not null;index" json:"user_id"`
